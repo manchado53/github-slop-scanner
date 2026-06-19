@@ -24,7 +24,7 @@ except ImportError:
 
 from slopscanner import report
 from slopscanner.github import GitHubClient
-from slopscanner.scanner import DEFAULT_QUERY, scan
+from slopscanner.scanner import DEFAULT_QUERY, scan, scan_user
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,12 +32,20 @@ def build_parser() -> argparse.ArgumentParser:
         prog="slop-scanner",
         description="Scan GitHub for low-effort 'AI slop' repositories.",
     )
+    p.add_argument("--user", default=None,
+                   help="Audit ONE user/org: score every public repo they own "
+                        "(ignores --query/--target). e.g. --user torvalds")
     p.add_argument("--query", default=DEFAULT_QUERY,
                    help="GitHub search query (default: recently-updated, near-zero-star repos).")
     p.add_argument("--target", type=int, default=25,
                    help="How many slop repos to collect before stopping (default 25).")
-    p.add_argument("--min-score", type=int, default=60,
-                   help="Minimum slop score (0-100) to count a repo (default 60).")
+    p.add_argument("--min-score", type=int, default=None,
+                   help="Minimum slop score (0-100) to count a repo "
+                        "(default: 60 for search, 0 for --user so you see all).")
+    p.add_argument("--include-forks", action="store_true",
+                   help="In --user mode, also score forked repos (default: skip forks).")
+    p.add_argument("--max-repos", type=int, default=300,
+                   help="In --user mode, cap how many repos to pull (default 300).")
     p.add_argument("--max-pages", type=int, default=10,
                    help="Max search pages to fetch (default 10).")
     p.add_argument("--per-page", type=int, default=30,
@@ -66,15 +74,27 @@ def main(argv=None) -> int:
         if not args.quiet:
             print(msg, file=sys.stderr)
 
-    repos = scan(
-        client,
-        query=args.query,
-        target=args.target,
-        min_score=args.min_score,
-        max_pages=args.max_pages,
-        per_page=args.per_page,
-        progress=progress,
-    )
+    if args.user:
+        min_score = 0 if args.min_score is None else args.min_score
+        repos = scan_user(
+            client,
+            args.user,
+            min_score=min_score,
+            max_repos=args.max_repos,
+            include_forks=args.include_forks,
+            progress=progress,
+        )
+    else:
+        min_score = 60 if args.min_score is None else args.min_score
+        repos = scan(
+            client,
+            query=args.query,
+            target=args.target,
+            min_score=min_score,
+            max_pages=args.max_pages,
+            per_page=args.per_page,
+            progress=progress,
+        )
 
     formats = {f.strip().lower() for f in args.format.split(",") if f.strip()}
 

@@ -132,6 +132,40 @@ class GitHubClient:
             return []
         return data.get("items", [])
 
+    def list_user_repos(self, username: str, *, include_forks: bool = False,
+                        max_repos: int = 300) -> List[dict]:
+        """List a user's (or org's) public repos via the REST list endpoint.
+
+        Paginates through all repos (not capped like search). Skips forks by
+        default since a fork isn't the user's own low-effort work.
+        """
+        repos: List[dict] = []
+        page = 1
+        per_page = 100
+        # Try the user endpoint first; fall back to the org endpoint on 404.
+        base = f"/users/{username}/repos"
+        while len(repos) < max_repos:
+            url = f"{API}{base}"
+            resp = self._request("GET", url,
+                                 params={"per_page": per_page, "page": page,
+                                         "sort": "updated", "type": "owner"})
+            if resp.status_code == 404 and base.startswith("/users/"):
+                base = f"/orgs/{username}/repos"
+                continue
+            if resp.status_code != 200:
+                break
+            batch = resp.json()
+            if not isinstance(batch, list) or not batch:
+                break
+            for r in batch:
+                if r.get("fork") and not include_forks:
+                    continue
+                repos.append(r)
+            if len(batch) < per_page:
+                break
+            page += 1
+        return repos[:max_repos]
+
     def get_readme(self, full_name: str) -> Optional[str]:
         data = self._get_json(f"/repos/{full_name}/readme")
         if not data:

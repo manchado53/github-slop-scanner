@@ -31,6 +31,10 @@ repos). Without a token you're limited to 60 requests/hour.
 
 ## Usage
 
+Two modes:
+
+**1. Hunt mode** — search GitHub broadly for slop:
+
 ```bash
 # Default: hunt recently-updated, near-zero-star repos
 python cli.py
@@ -40,6 +44,17 @@ python cli.py --query "language:python stars:0..1 sort:updated" \
               --target 25 --min-score 60 \
               --out results --format table,json,csv
 ```
+
+**2. Audit mode** — score *every* public repo a single user/org owns:
+
+```bash
+python cli.py --user some-username
+python cli.py --user some-username --include-forks --out report
+```
+
+In audit mode the scanner pulls all of that account's repos, scores each, and shows the
+full list (sloppiest first). `--min-score` defaults to 0 here so nothing is hidden;
+forks are skipped unless you pass `--include-forks`.
 
 Key flags:
 
