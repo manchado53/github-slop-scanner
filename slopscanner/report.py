@@ -76,6 +76,27 @@ def print_table(repos: List[ScannedRepo]) -> None:
     console.print(table)
 
 
+def print_detail(repo: ScannedRepo) -> None:
+    """Full breakdown for a single repo: score, per-group points, every reason."""
+    r = repo.result
+    print()
+    print(f"{repo.full_name}   {repo.html_url}")
+    print(f"  score: {r.score}/100   ->  {r.label()}")
+    print(f"  stars: {repo.stars}   language: {repo.language or '-'}")
+    if repo.description:
+        print(f"  about: {repo.description}")
+    print("  group breakdown:")
+    for group, pts in r.groups.items():
+        print(f"    {group:<11} {pts:>5}")
+    print("  reasons:")
+    if r.reasons:
+        for reason in r.reasons:
+            print(f"    - {reason}")
+    else:
+        print("    (none — this repo shows no slop tells)")
+    print()
+
+
 def _print_plain(repos: List[ScannedRepo]) -> None:
     print(f"\nGitHub Slop Scan — {len(repos)} repos\n" + "=" * 60)
     for i, r in enumerate(repos):

@@ -4,6 +4,7 @@ keep going until enough high-scoring slop repos are collected (or limits hit).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
@@ -94,6 +95,66 @@ def scan(
 
     collected.sort(key=lambda r: r.score, reverse=True)
     return collected
+
+
+def parse_repo_ref(ref: str) -> Optional[str]:
+    """Normalize a repo reference to 'owner/name'.
+
+    Accepts a full URL (https://github.com/owner/name[/...][.git]),
+    'github.com/owner/name', or a bare 'owner/name'. Returns None if it can't
+    find a plausible owner/name pair.
+    """
+    if not ref:
+        return None
+    s = ref.strip()
+    s = re.sub(r"^https?://", "", s)
+    s = re.sub(r"^(www\.)?github\.com/", "", s)
+    s = s.rstrip("/")
+    if s.endswith(".git"):
+        s = s[:-4]
+    parts = [p for p in s.split("/") if p]
+    if len(parts) >= 2:
+        owner, name = parts[0], parts[1]
+        if owner and name:
+            return f"{owner}/{name}"
+    return None
+
+
+def scan_repo(
+    client: GitHubClient,
+    ref: str,
+    *,
+    progress: Optional[Callable[[str], None]] = None,
+) -> List[ScannedRepo]:
+    """Score a single repo given a URL or 'owner/name'. Returns 0 or 1 result."""
+    def emit(msg: str) -> None:
+        if progress:
+            progress(msg)
+
+    full = parse_repo_ref(ref)
+    if not full:
+        emit(f"Could not parse a repo from {ref!r}. Use a GitHub URL or 'owner/name'.")
+        return []
+
+    emit(f"Fetching {full}…")
+    repo = client.get_repo(full)
+    if not repo:
+        emit(f"Repo '{full}' not found (private, renamed, or does not exist).")
+        return []
+
+    client.enrich(repo)
+    res = score(repo)
+    emit(f"{full} -> {res.score} ({res.label()})")
+    return [
+        ScannedRepo(
+            full_name=repo.get("full_name", full),
+            html_url=repo.get("html_url", ""),
+            description=(repo.get("description") or "").strip(),
+            stars=repo.get("stargazers_count", 0),
+            language=repo.get("language"),
+            result=res,
+        )
+    ]
 
 
 def scan_user(

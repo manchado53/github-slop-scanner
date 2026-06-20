@@ -24,7 +24,7 @@ except ImportError:
 
 from slopscanner import report
 from slopscanner.github import GitHubClient
-from slopscanner.scanner import DEFAULT_QUERY, scan, scan_user
+from slopscanner.scanner import DEFAULT_QUERY, scan, scan_repo, scan_user
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,6 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
         prog="slop-scanner",
         description="Scan GitHub for low-effort 'AI slop' repositories.",
     )
+    p.add_argument("--repo", default=None,
+                   help="Score ONE repo by URL or owner/name "
+                        "(e.g. --repo https://github.com/owner/name).")
     p.add_argument("--user", default=None,
                    help="Audit ONE user/org: score every public repo they own "
                         "(ignores --query/--target). e.g. --user torvalds")
@@ -74,7 +77,10 @@ def main(argv=None) -> int:
         if not args.quiet:
             print(msg, file=sys.stderr)
 
-    if args.user:
+    single = bool(args.repo)
+    if args.repo:
+        repos = scan_repo(client, args.repo, progress=progress)
+    elif args.user:
         min_score = 0 if args.min_score is None else args.min_score
         repos = scan_user(
             client,
@@ -99,12 +105,19 @@ def main(argv=None) -> int:
     formats = {f.strip().lower() for f in args.format.split(",") if f.strip()}
 
     if not repos:
-        print("No repos matched the slop threshold. Try lowering --min-score "
-              "or broadening --query.", file=sys.stderr)
+        if single:
+            print("Could not score that repo (not found, private, or unparseable link).",
+                  file=sys.stderr)
+        else:
+            print("No repos matched the slop threshold. Try lowering --min-score "
+                  "or broadening --query.", file=sys.stderr)
         return 0
 
     if "table" in formats:
-        report.print_table(repos)
+        if single:
+            report.print_detail(repos[0])
+        else:
+            report.print_table(repos)
 
     base = args.out or "results"
     if "json" in formats:

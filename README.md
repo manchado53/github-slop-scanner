@@ -31,7 +31,16 @@ repos). Without a token you're limited to 60 requests/hour.
 
 ## Usage
 
-Two modes:
+Three modes:
+
+**0. Single repo** — score one repo from a link (or `owner/name`):
+
+```bash
+python cli.py --repo https://github.com/owner/name
+python cli.py --repo owner/name
+```
+
+Prints a full breakdown: score, per-group points, and every reason it fired.
 
 **1. Hunt mode** — search GitHub broadly for slop:
 

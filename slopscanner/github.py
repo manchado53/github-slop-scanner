@@ -132,6 +132,10 @@ class GitHubClient:
             return []
         return data.get("items", [])
 
+    def get_repo(self, full_name: str) -> Optional[dict]:
+        """Fetch a single repo's metadata (owner/name). None if not found."""
+        return self._get_json(f"/repos/{full_name}")
+
     def list_user_repos(self, username: str, *, include_forks: bool = False,
                         max_repos: int = 300) -> List[dict]:
         """List a user's (or org's) public repos via the REST list endpoint.
