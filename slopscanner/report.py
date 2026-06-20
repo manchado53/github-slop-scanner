@@ -44,36 +44,43 @@ def write_csv(repos: List[ScannedRepo], path: str) -> None:
             writer.writerow(row)
 
 
+def _score_color(score: int) -> str:
+    return "red" if score >= 80 else "yellow" if score >= 60 else \
+        "magenta" if score >= 40 else "green"
+
+
 def print_table(repos: List[ScannedRepo]) -> None:
-    """Pretty table via rich if available, else a plain-text fallback."""
+    """Compact, narrow-friendly ranked list (no wide table to squish).
+
+    Each repo is one header line plus an indented 'why' line that wraps
+    naturally on its own row, so it reads fine in any terminal width.
+    """
     try:
         from rich.console import Console
-        from rich.table import Table
     except ImportError:
         _print_plain(repos)
         return
 
     console = Console()
-    table = Table(title=f"GitHub Slop Scan — {len(repos)} repos", show_lines=False)
-    table.add_column("#", justify="right", style="dim")
-    table.add_column("Score", justify="right")
-    table.add_column("Repo", style="cyan", no_wrap=True)
-    table.add_column("★", justify="right")
-    table.add_column("Lang")
-    table.add_column("Top reasons")
+    width = max(2, len(str(len(repos))))
+    console.print(f"\n[bold]GitHub Slop Scan[/bold] — {len(repos)} repos "
+                  f"(sloppiest first)\n")
 
-    for i, r in enumerate(repos):
-        color = "red" if r.score >= 80 else "yellow" if r.score >= 60 else "white"
-        reasons = ", ".join(r.result.reasons[:3])
-        table.add_row(
-            str(i + 1),
-            f"[{color}]{r.score}[/{color}]",
-            r.full_name,
-            str(r.stars),
-            r.language or "-",
-            reasons,
+    for i, r in enumerate(repos, 1):
+        color = _score_color(r.score)
+        meta = f"★{r.stars}"
+        if r.language:
+            meta += f" · {r.language}"
+        console.print(
+            f"[dim]{i:>{width}}.[/dim] "
+            f"[{color}]{r.score:>3}[/{color}] "
+            f"[bold]{r.result.label():<10}[/bold] "
+            f"[cyan]{r.full_name}[/cyan]  [dim]{meta}[/dim]"
         )
-    console.print(table)
+        if r.result.reasons:
+            why = ", ".join(r.result.reasons[:5])
+            console.print(f"[dim]{'':>{width}}     why:[/dim] {why}")
+    console.print()
 
 
 def print_detail(repo: ScannedRepo) -> None:
