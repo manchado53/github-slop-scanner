@@ -1,9 +1,19 @@
 # GitHub Slop Scanner
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)
+
 Find GitHub repositories that look like low-effort **"AI slop"** — repos generated in one
 shot, pushed once, and abandoned, with little real thought behind them. The scanner
 searches GitHub, scores each repo on a set of slop "tells," and prints a ranked report
 explaining *why* each repo scored the way it did.
+
+It can score a **single repo**, audit **every repo a user owns**, or **hunt** GitHub
+broadly — and export a self-contained HTML report you can open in a browser:
+
+![HTML report screenshot](docs/report-screenshot.png)
+
+> Repos shown above are fictional demo data, not real accounts.
 
 ## What counts as slop?
 
@@ -98,8 +108,9 @@ slopscanner/
   signals.py   # one pure function per heuristic -> (points, reason)
   scorer.py    # combine signals -> 0-100 score + reasons + group breakdown
   scanner.py   # the page-by-page scan loop
-  report.py    # rich terminal table + JSON/CSV writers
+  report.py    # terminal list + JSON / CSV / HTML writers
 cli.py         # entry point
+tools/         # make_demo_report.py (generates the README screenshot)
 tests/         # offline fixture tests
 ```
 
@@ -107,3 +118,7 @@ tests/         # offline fixture tests
 
 Heuristics, not proof. A high score means a repo *looks* low-effort; it isn't a judgment
 of any person. Tune the weights in `slopscanner/signals.py` (`GROUPS`) to taste.
+
+## License
+
+[MIT](LICENSE) © 2026 manchado53
