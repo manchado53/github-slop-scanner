@@ -62,7 +62,19 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _force_utf8() -> None:
+    """Windows consoles default to cp1252 and choke on emoji/box characters.
+    Reconfigure stdout/stderr to UTF-8 so output never crashes on a stray ★ or
+    emoji in a repo name."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main(argv=None) -> int:
+    _force_utf8()
     args = build_parser().parse_args(argv)
 
     token = os.environ.get("GITHUB_TOKEN")

@@ -7,3 +7,6 @@ results.csv
 *.egg-info/
 .venv/
 venv/
+
+dhanalakshmikm25.json
+*.json
