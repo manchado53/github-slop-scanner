@@ -56,7 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default=None,
                    help="Base path for output files (writes <out>.json / .csv).")
     p.add_argument("--format", default="table",
-                   help="Comma list of outputs: table,json,csv (default table).")
+                   help="Comma list of outputs: table,json,csv,html (default table).")
     p.add_argument("--quiet", action="store_true", help="Suppress progress lines.")
     p.add_argument("--verbose", action="store_true", help="Log GitHub API activity.")
     return p
@@ -138,6 +138,12 @@ def main(argv=None) -> int:
     if "csv" in formats:
         report.write_csv(repos, f"{base}.csv")
         print(f"Wrote {base}.csv", file=sys.stderr)
+    if "html" in formats:
+        title = (f"Slop scan: {args.user}" if args.user
+                 else f"Slop scan: {args.repo}" if args.repo
+                 else "GitHub Slop Scan")
+        report.write_html(repos, f"{base}.html", title=title)
+        print(f"Wrote {base}.html  (open it in a browser)", file=sys.stderr)
 
     return 0
 
